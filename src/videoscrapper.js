@@ -14,13 +14,17 @@ class VideoScrapper {
 	}
 
 	async searchVideos (Builder, By, until, chrome) {
-		const options = new chrome.Options().addArguments('--headless=new');
+		const options = new chrome.Options();//.addArguments('--headless=new');
 		const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
 
 		try {
 
 			await driver.get(this.prefix + this.searchQuery);
-			const links = await driver.wait(until.elementsLocated(By.css(this.elSelector)), 5000);
+			await driver.wait(until.elementsLocated(By.css(this.elSelector)), 5000);
+
+			await driver.actions().scroll(0, 0, 0, 1000 * 10000).perform();
+
+			const links = await driver.findElements(By.css(this.elSelector));
 
 			for (let link of links) {
 				const videoName = await link.getAttribute('innerText');
