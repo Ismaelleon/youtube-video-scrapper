@@ -1,58 +1,46 @@
 const { Builder, By, Key, until } = require('selenium-webdriver');
-const readline = require('node:readline/promises');
 const chrome = require('selenium-webdriver/chrome');
 const colors = require('colors');
 
-const rl = readline.createInterface({
-	input: process.stdin,
-	output: process.stdout,
-});
-
-class VideoScrapper {
+class SongsScrapper {
 	constructor () {
-		this.videoNames = [];
-		this.links = [];
-		this.prefix = 'https://youtube.com/results?search_query=';
-		this.elSelector = '#title-wrapper > h3 > a';
+		this.songs = [];
+		this.prefix = 'https://music.youtube.com/search?q=';
+		this.elSelector = '.title-column > :first-child > a';
 	}
 
-	async init () {
-		this.searchQuery = await rl.question('Insert a search query: ');
-		console.log('Searching videos...')
-
-		this.searchVideos();
-	}
-
-	async searchVideos () {
+	async getSongs (searchQuery) {
 		const options = new chrome.Options();
 		options.
-			addArguments('--headless=new').
+			//addArguments('--headless=new').
 			addArguments('--no-sandbox').
 			addArguments('--start-maximized');
 
 		const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
 
 		try {
-			await driver.get(this.prefix + this.searchQuery);
-			await driver.wait(until.elementsLocated(By.css(this.elSelector)), 5000);
+			await driver.get(this.prefix + searchQuery);
+
+			const filterButton = await driver.wait(until.elementLocated(By.css('#chips:nth-child(2) > :nth-child(2) > div > a')));
+			const actions = await driver.actions({ async: true });
+			await actions.move({ origin: filterButton }).click().perform();
 
 			await driver.actions().scroll(0, 0, 0, 1000 * 10000).perform();
 
 			const links = await driver.findElements(By.css(this.elSelector));
 
 			for (let link of links) {
-				const videoName = await link.getAttribute('innerText');
-				link = await link.getAttribute('href');
-				link = link.split('&')[0].replace('youtube', 'youtubepp');
+				const songName = await link.getAttribute('innerText');
+				const path = await link.getAttribute('href');
+				const songLink = 'https://youtubepp.com/' + path;
 
-				console.log(`Found: ${videoName}`);
-				
-				this.videoNames.push(videoName);
-				this.links.push(link);
+				this.songs.push({
+					name: songName,
+					link: songLink,
+				});
 			}
 
-			console.log('\nDownloading Videos...');
-			this.downloadVideos(Builder, By, until, chrome);
+			return this.songs
 		} catch (error) {
 			console.log(error);
 		}
@@ -101,4 +89,4 @@ class VideoScrapper {
 	
 }
 
-module.exports = VideoScrapper;
+module.exports = SongsScrapper;
