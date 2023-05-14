@@ -1,3 +1,13 @@
+const { Builder, By, Key, until } = require('selenium-webdriver');
+const readline = require('node:readline/promises');
+const chrome = require('selenium-webdriver/chrome');
+const colors = require('colors');
+
+const rl = readline.createInterface({
+	input: process.stdin,
+	output: process.stdout,
+});
+
 class VideoScrapper {
 	constructor () {
 		this.videoNames = [];
@@ -6,19 +16,23 @@ class VideoScrapper {
 		this.elSelector = '#title-wrapper > h3 > a';
 	}
 
-	async init (rl, Builder, By, until, chrome) {
+	async init () {
 		this.searchQuery = await rl.question('Insert a search query: ');
 		console.log('Searching videos...')
 
-		this.searchVideos(Builder, By, until, chrome);
+		this.searchVideos();
 	}
 
-	async searchVideos (Builder, By, until, chrome) {
-		const options = new chrome.Options();//.addArguments('--headless=new');
+	async searchVideos () {
+		const options = new chrome.Options();
+		options.
+			addArguments('--headless=new').
+			addArguments('--no-sandbox').
+			addArguments('--start-maximized');
+
 		const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
 
 		try {
-
 			await driver.get(this.prefix + this.searchQuery);
 			await driver.wait(until.elementsLocated(By.css(this.elSelector)), 5000);
 
@@ -44,17 +58,30 @@ class VideoScrapper {
 		}
 	}
 
-	async downloadVideos (Builder, By, until, chrome) {
-		const options = new chrome.Options().addArguments('--headless=new');
+	async downloadVideos () {
+		const options = new chrome.Options();
+		options.
+			addArguments('--headless=new').
+			addArguments('--no-sandbox').
+			addArguments('--start-maximized');
+
 		try {
 			for (let i = 0; i < this.links.length; i++) {
 				const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
+				const originalTab = await driver.getWindowHandle();
 
 				await driver.get(this.links[i]);
 
 				const button = await driver.wait(until.elementLocated(By.css('td:nth-child(3) > button')));
 				const actions = await driver.actions({ async: true });
 				await actions.move({ origin: button }).click().perform();
+
+				const tabs = await driver.getAllWindowHandles();
+
+				if (tabs.length > 0) {
+					await driver.switchTo().window(originalTab);
+					await actions.move({ origin: button }).click().perform();
+				}
 
 				const downloadButton = await driver.wait(until.elementLocated(By.css('#process-result > div > a')));
 				const link = await downloadButton.getAttribute('href');
