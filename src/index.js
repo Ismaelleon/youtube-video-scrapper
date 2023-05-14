@@ -1,5 +1,12 @@
-const VideoScrapper = require('./videoscrapper');
+const express = require('express');
+const bodyParser = require('body-parser');
 
-const videoScrapper = new VideoScrapper();
+const app = express();
+const port = process.env.PORT || 8080;
 
-videoScrapper.init();
+// middlewares
+app.use(bodyParser.json());
+
+app.listen(port, () => {
+	console.log(`app running on port ${port}`);
+});
